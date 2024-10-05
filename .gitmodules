@@ -1,3 +1,7 @@
 [submodule "config-files"]
 	path = config-files
 	url = git@github.com:saldyy/config-files.git
+
+[submodule "personal-vault"]
+	path = personal-vault
+	url = git@github.com:saldyy/personal-vault.git

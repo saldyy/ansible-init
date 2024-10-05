@@ -1,0 +1,196 @@
+- name: Install Essentials
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Installing on Zsh
+      ansible.builtin.package:
+        name: zsh
+        state: present
+    - name: Installing on Neovim
+      ansible.builtin.package:
+        name: neovim
+        state: present
+    - name: Installing on CURL
+      ansible.builtin.package:
+        name: curl
+        state: present
+    - name: Installing on Xclip
+      ansible.builtin.package:
+        name: xclip
+        state: present
+    - name: Installing on Wezterm
+      ansible.builtin.package:
+        name: xclip
+        state: present
+
+- name: Install Oh My Zsh
+  hosts: localhost
+  tasks:
+    - name: Ensure Zsh is installed
+      ansible.builtin.package:
+        name: zsh
+        state: present
+    - name: Ensure CURL is installed
+      ansible.builtin.package:
+        name: curl
+        state: present
+    - name: Installing 
+      ansible.builtin.shell: >
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+      args:
+        executable: /bin/bash
+
+- name: Install Packer.nvim
+  hosts: localhost
+  tasks:
+    - name: Ensure CURL is installed
+      ansible.builtin.package:
+        name: curl
+        state: present
+    - name: Installing 
+      ansible.builtin.shell: >
+        git clone --depth 1 https://github.com/wbthomason/packer.nvim\
+         ~/.local/share/nvim/site/pack/packer/start/packer.nvim
+      args:
+        executable: /bin/bash
+
+- name: Install Fzf
+  hosts: localhost
+  tasks:
+    - name: Ensure CURL is installed
+      ansible.builtin.package:
+        name: curl
+        state: present
+    - name: Installing 
+      ansible.builtin.shell: >
+        git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+        ~/.fzf/install
+
+- name: Install WezTerm Terminal Emulator
+  hosts: localhost
+  become: true
+  tasks:
+    # Debian-based installation
+    - name: Install dependencies for WezTerm on Debian
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Download WezTerm package on Debian
+      ansible.builtin.get_url:
+        url: https://github.com/wez/wezterm/releases/download/nightly/wezterm-nightly.Ubuntu22.04.deb
+        dest: /tmp/wezterm.deb
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Install WezTerm package on Debian
+      ansible.builtin.apt:
+        deb: /tmp/wezterm.deb
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Remove WezTerm .deb file
+      ansible.builtin.file:
+        path: /tmp/wezterm.deb
+        state: absent
+      when: ansible_facts['os_family'] == 'Debian'
+
+    # Fedora-based installation
+    - name: Install WezTerm on Fedora
+      ansible.builtin.dnf:
+        name: wezterm
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Update WezTerm to the latest version on Fedora
+      ansible.builtin.dnf:
+        name: wezterm
+        state: latest
+      when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Install Docker and configure post-installation
+  hosts: localhost
+  become: true
+  tasks:
+    # Debian-based installation
+    - name: Install dependencies for Docker on Debian
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg
+        - lsb-release
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Add Docker GPG key on Debian
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Add Docker APT repository on Debian
+      ansible.builtin.shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Update APT package index on Debian
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Install Docker on Debian
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: ansible_facts['os_family'] == 'Debian'
+
+    # Fedora-based installation with DNF
+    - name: Install dependencies for Docker on Fedora
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - dnf-plugins-core
+        - device-mapper-persistent-data
+        - lvm2
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Add Docker repository on Fedora
+      ansible.builtin.shell: |
+        dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Install Docker on Fedora
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    # Common Post-installation steps
+    - name: Start and enable Docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add current user to the Docker group
+      ansible.builtin.user:
+        name: "{{ ansible_facts['user_id'] }}"
+        groups: docker
+        append: yes
+
+    - name: Enable Docker to start on boot
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started

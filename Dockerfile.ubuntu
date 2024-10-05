@@ -1,0 +1,34 @@
+# Use the official Debian image as a base
+FROM debian:11.1
+
+# Set environment variables for non-interactive installs
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update the package list and install necessary dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-apt \
+    ssh \
+    sudo \
+    git \
+    curl \
+    gnupg2 && \
+    # Install Ansible
+    pip3 install ansible && \
+    # Clean up APT cache
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Verify Ansible installation
+RUN ansible --version
+
+# Set the working directory
+WORKDIR /playbooks
+
+COPY . .
+
+# Set the default command (optional)
+CMD ["ansible", "--version"]
+

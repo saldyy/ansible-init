@@ -1,0 +1,12 @@
+- name: Clone dotfiles
+  hosts: localhost
+  tasks:
+    - name: Ensure Git is installed
+      ansible.builtin.package:
+        name: git
+        state: present
+    - name: Clone dotfiles
+      ansible.builtin.git:
+        repo: git@github.com:saldyy/config-files.git
+        dest: ~/Documents/configs/config-files
+
